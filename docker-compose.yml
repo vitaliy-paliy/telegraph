@@ -1,0 +1,22 @@
+version: "3.7"
+services:
+    db:
+        image: postgres
+        environment:
+            POSTGRES_PASSWORD: secret 
+            POSTGRES_USER: paliy 
+            POSTGRES_DB: telegraph 
+        volumes:
+            - ./pgdata
+        ports:
+            - '5432:5432'
+    dbtest:
+        image: postgres
+        environment:
+            POSTGRES_PASSWORD:  test
+            POSTGRES_USER:  test
+            POSTGRES_DB: test
+        volumes:
+            - ./pgdatatest
+        ports:
+            - '5433:5432'

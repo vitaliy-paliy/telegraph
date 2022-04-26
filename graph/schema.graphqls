@@ -1,28 +1,12 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
+# Schema for telegraph.
+# schema.graphqls is for defining standard types.
 
-type Todo {
-  id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
-}
-
-type User {
-  id: ID!
-  name: String!
-}
+scalar Time
 
 type Query {
-  todos: [Todo!]!
-}
-
-input NewTodo {
-  text: String!
-  userId: String!
+	welcome: String!
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+	welcome: String!
 }

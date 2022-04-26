@@ -8,12 +8,12 @@ import (
 	"telegraph/db"
 )
 
-type Resolver struct{
+type Resolver struct {
 	client *db.Client
 }
 
 func NewResolver(client *db.Client) *Resolver {
-	return &Resolver {
+	return &Resolver{
 		client: client,
 	}
 }

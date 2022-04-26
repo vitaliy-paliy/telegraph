@@ -5,17 +5,15 @@ package graph
 
 import (
 	"context"
-	"fmt"
 	"telegraph/graph/generated"
-	"telegraph/graph/model"
 )
 
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) Welcome(ctx context.Context) (string, error) {
+	return "Welcome to Telegraph.", nil
 }
 
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) Welcome(ctx context.Context) (string, error) {
+	return "Welcome to Telegraph.", nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

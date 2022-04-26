@@ -1,21 +1,21 @@
 package main
 
 import (
-	"time"
 	"net/http"
+	"time"
 
 	"telegraph/db"
 	"telegraph/graph"
 	"telegraph/graph/generated"
 
+	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
-	"github.com/gorilla/websocket"
 
 	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
 )
 
 func newServer() (server *handler.Server) {
@@ -31,12 +31,12 @@ func newServer() (server *handler.Server) {
 
 	// New Websocket && CORS.
 	server.AddTransport(&transport.Websocket{
-		Upgrader: websocket.Upgrader {
-						CheckOrigin: func(r *http.Request) bool {
-								return true
-						},
-						ReadBufferSize: 1024,
-						WriteBufferSize: 1024,
+		Upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
 		},
 		KeepAlivePingInterval: 10 * time.Second,
 	})
@@ -51,12 +51,11 @@ func newServer() (server *handler.Server) {
 	server.Use(extension.AutomaticPersistedQuery{
 		Cache: lru.New(100),
 	})
-	
+
 	return
 }
 
 func newRouter(server *handler.Server) (e *echo.Echo) {
-	// New Router.
 	e = echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())

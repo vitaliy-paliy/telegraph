@@ -1,0 +1,17 @@
+# Auth schema.
+
+input NewUserInput {
+	name: String!
+	username: String!
+	profile_image_url: String!
+	phone_number: String!
+}
+
+extend type Query {
+	sendOTP(phone_number: String!): String!
+	signIn(phone_number: String!): User!
+}
+
+extend type Mutation {
+	signUp(new_user: NewUserInput!): User!
+}

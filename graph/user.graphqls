@@ -1,0 +1,15 @@
+# User schema.
+
+scalar UserActivityStatus
+
+type User {
+	id: ID!
+	name: String!
+	username: String!
+	phone_number: String!	
+	profile_image_url: String!
+	activity_status: UserActivityStatus!
+	created_at: Time! 
+	updated_at: Time!
+	deleted_at: Time
+}

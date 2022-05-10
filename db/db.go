@@ -9,8 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const DSN = "host=localhost port=5432 user=paliy password=secret dbname=telegraph sslmode=disable"
-
 type Client struct {
 	db   *gorm.DB
 	Auth *store.AuthStore
@@ -20,11 +18,11 @@ func (c *Client) init() {
 	c.Auth = store.NewAuthStore(c.db)
 }
 
-func Start() (client *Client, err error) {
+func Start(dsn string) (client *Client, err error) {
 	// Configure gorm DB.
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DriverName: "postgres",
-		DSN:        DSN,
+		DSN:        dsn,
 	}))
 	if err != nil {
 		return

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"net/http"
 	"strings"
 
 	"github.com/labstack/echo"
@@ -16,13 +15,11 @@ func Auth(next echo.HandlerFunc) echo.HandlerFunc {
 
 		// Validate JWT.
 		result, err := JwtValidate(token)
-		if err != nil || !result.Valid {
-			return c.JSON(http.StatusForbidden, "Invalid token.")
+		if err == nil && result.Valid {
+			claims, _ := result.Claims.(*JWTAuthClaims)
+			ctx := context.WithValue(c.Request().Context(), "auth", claims)
+			c.SetRequest(c.Request().WithContext(ctx))
 		}
-
-		claims, _ := result.Claims.(*JWTAuthClaims)
-		ctx := context.WithValue(c.Request().Context(), "auth", claims)
-		c.SetRequest(c.Request().WithContext(ctx))
 
 		next(c)
 		return nil

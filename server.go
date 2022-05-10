@@ -6,7 +6,9 @@ import (
 
 	"telegraph/db"
 	"telegraph/graph"
+	"telegraph/graph/directives"
 	"telegraph/graph/generated"
+	tmiddleware "telegraph/middleware"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
@@ -27,7 +29,9 @@ func newServer() (server *handler.Server) {
 
 	// New server.
 	resolver := graph.NewResolver(client)
-	server = handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
+	config := generated.Config{Resolvers: resolver}
+	config.Directives.Auth = directives.Auth
+	server = handler.New(generated.NewExecutableSchema(config))
 
 	// New Websocket && CORS.
 	server.AddTransport(&transport.Websocket{
@@ -59,6 +63,7 @@ func newRouter(server *handler.Server) (e *echo.Echo) {
 	e = echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(tmiddleware.Auth)
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{}))
 
 	// Routing.

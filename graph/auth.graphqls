@@ -1,5 +1,7 @@
 # Auth schema.
 
+directive @auth on FIELD_DEFINITION
+
 input NewUserInput {
 	name: String!
 	username: String!
@@ -9,7 +11,7 @@ input NewUserInput {
 
 extend type Query {
 	sendOTP(phone_number: String!): String!
-	signIn(phone_number: String!): User!
+	signIn(phone_number: String!): User! @auth
 }
 
 extend type Mutation {

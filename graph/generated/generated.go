@@ -42,6 +42,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	Auth func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -273,6 +274,8 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "graph/auth.graphqls", Input: `# Auth schema.
 
+directive @auth on FIELD_DEFINITION
+
 input NewUserInput {
 	name: String!
 	username: String!
@@ -282,7 +285,7 @@ input NewUserInput {
 
 extend type Query {
 	sendOTP(phone_number: String!): String!
-	signIn(phone_number: String!): User!
+	signIn(phone_number: String!): User! @auth
 }
 
 extend type Mutation {
@@ -654,8 +657,28 @@ func (ec *executionContext) _Query_signIn(ctx context.Context, field graphql.Col
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().SignIn(rctx, fc.Args["phone_number"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().SignIn(rctx, fc.Args["phone_number"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.User); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *telegraph/model.User`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

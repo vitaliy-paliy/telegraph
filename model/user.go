@@ -5,6 +5,8 @@ import (
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/satori/go.uuid"
 )
 
 type User struct {
@@ -28,10 +30,14 @@ type NewUserInput struct {
 
 func (u *NewUserInput) Convert() *User {
 	return &User{
+		ID:              uuid.NewV4().String(),
+		ActivityStatus:  UserActivityStatusEnum.OFFLINE,
 		Name:            u.Name,
 		Username:        u.Username,
 		PhoneNumber:     u.PhoneNumber,
 		ProfileImageURL: u.ProfileImageURL,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 }
 

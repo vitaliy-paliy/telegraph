@@ -5,32 +5,34 @@ import (
 	"telegraph/store"
 
 	_ "github.com/lib/pq"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 type Client struct {
-	db   *gorm.DB
+	DB   *gorm.DB
 	Auth *store.AuthStore
 }
 
 func (c *Client) init() {
-	c.Auth = store.NewAuthStore(c.db)
+	c.Auth = store.NewAuthStore(c.DB)
 }
 
-func Start(dsn string) (client *Client, err error) {
+func Start() (client *Client, err error) {
 	// Configure gorm DB.
+	dsn := "host=localhost port=5432 user=paliy password=secret dbname=telegraph sslmode=disable"
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DriverName: "postgres",
 		DSN:        dsn,
-	}))
+	}), &gorm.Config{})
 	if err != nil {
 		return
 	}
 	autoMigrate(db)
 
 	// New client.
-	client = &Client{db: db}
+	client = &Client{DB: db}
 	client.init()
 
 	return

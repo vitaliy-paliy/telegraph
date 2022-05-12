@@ -22,8 +22,7 @@ import (
 
 func newServer() (server *handler.Server) {
 	// Initialize database client.
-	dsn := "host=localhost port=5432 user=paliy password=secret dbname=telegraph sslmode=disable"
-	client, err := db.Start(dsn)
+	client, err := db.Start()
 	if err != nil {
 		panic(err)
 	}

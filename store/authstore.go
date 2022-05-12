@@ -10,7 +10,6 @@ import (
 	"telegraph/utils"
 
 	"github.com/joho/godotenv"
-	"github.com/satori/go.uuid"
 	"github.com/twilio/twilio-go"
 	openapi "github.com/twilio/twilio-go/rest/api/v2010"
 )
@@ -58,9 +57,6 @@ func (s *AuthStore) SignUp(user *model.User) (*model.User, error) {
 	if err := utils.ValidateNewUser(user); err != nil {
 		return nil, err
 	}
-
-	user.ID = uuid.NewV4().String()
-	user.ActivityStatus = model.UserActivityStatusEnum.OFFLINE
 
 	err := s.db.Create(user).Error
 

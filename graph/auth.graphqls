@@ -15,5 +15,5 @@ extend type Query {
 }
 
 extend type Mutation {
-	signUp(new_user: NewUserInput!): User!
+	signUp(new_user: NewUserInput!): User! @auth
 }

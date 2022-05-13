@@ -11,8 +11,8 @@ import (
 )
 
 type Client struct {
-	DB   *gorm.DB
-	Auth *store.AuthStore
+	DB         *gorm.DB
+	Auth       *store.AuthStore
 	Friendship *store.FriendshipStore
 }
 

@@ -8,13 +8,13 @@ import (
 )
 
 type Friendship struct {
-	ID	 			string						`json:"id"`	
-	Sender 		string						`json:"sender"`
-	Recipient string 						`json:"recipient"`
-	Status 		FriendshipStatus 	`json:"status"`
-	CreatedAt time.Time					`json:"created_at"`
-	UpdatedAt time.Time					`json:"updated_at"`
-	DeletedAt time.Time					`json:"deleted_at"`
+	ID        string           `json:"id"`
+	Sender    string           `json:"sender"`
+	Recipient string           `json:"recipient"`
+	Status    FriendshipStatus `json:"status"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
+	DeletedAt time.Time        `json:"deleted_at"`
 }
 
 func (f *Friendship) Invert() *Friendship {
@@ -22,13 +22,13 @@ func (f *Friendship) Invert() *Friendship {
 }
 
 type NewFriendshipInput struct {
-	Sender 		string  `json:"sender"`
-	Recipient string 	`json:"recipient"`
+	Sender    string `json:"sender"`
+	Recipient string `json:"recipient"`
 }
 
 func (f *NewFriendshipInput) Convert() *Friendship {
-	return &Friendship {
-		Sender: f.Sender,
+	return &Friendship{
+		Sender:    f.Sender,
 		Recipient: f.Recipient,
 	}
 }
@@ -37,13 +37,13 @@ func (f *NewFriendshipInput) Convert() *Friendship {
 type FriendshipStatus int
 
 var FriendshipStatusEnum = struct {
-	PENDING 	FriendshipStatus
-	ACCEPTED 	FriendshipStatus	
-	BLOCKED 	FriendshipStatus
-} {
-	PENDING: 0,
+	PENDING  FriendshipStatus
+	ACCEPTED FriendshipStatus
+	BLOCKED  FriendshipStatus
+}{
+	PENDING:  0,
 	ACCEPTED: 1,
-	BLOCKED: 2,
+	BLOCKED:  2,
 }
 
 func (f *FriendshipStatus) UnmarshalGQL(v interface{}) error {

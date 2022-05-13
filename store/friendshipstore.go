@@ -29,19 +29,19 @@ func (f *FriendshipStore) Accept(friendshipID string) (*model.Friendship, error)
 	if err != nil {
 		return nil, fmt.Errorf("An error occured while trying to accept a friendship. Error: %s.", err)
 	}
-	
+
 	friendship.Status = model.FriendshipStatusEnum.ACCEPTED
 	err = f.db.Where("sender = ? AND recipient = ?", friendship.Sender, friendship.Recipient).Select("updated_at", "status").Updates(friendship).Error
-	
+
 	return friendship, err
 }
 
 func (f *FriendshipStore) Get(friendshipID string) (*model.Friendship, error) {
-	friendship := &model.Friendship{ID:friendshipID}
-	
+	friendship := &model.Friendship{ID: friendshipID}
+
 	err := f.db.Where("id = ?", friendshipID).Find(friendship).Error
 
-	return friendship, err	
+	return friendship, err
 }
 
 // FriendshipStore helper methods.

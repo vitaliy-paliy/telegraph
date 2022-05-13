@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"time"
 
 	"telegraph/model"
 
@@ -24,24 +25,44 @@ func (f *FriendshipStore) Create(friendship *model.Friendship) (*model.Friendshi
 	return friendship, err
 }
 
-func (f *FriendshipStore) Accept(friendshipID string) (*model.Friendship, error) {
-	friendship, err := f.Get(friendshipID)
+func (f *FriendshipStore) Delete(ID string) (friendship *model.Friendship, err error) {
+	friendship, err = f.Get(ID)
 	if err != nil {
-		return nil, fmt.Errorf("An error occured while trying to accept a friendship. Error: %s.", err)
+		return
+	}
+
+	friendship.DeletedAt = time.Now()
+	err = f.db.Unscoped().Where("id = ?", ID).Delete(friendship).Error
+
+	return
+}
+
+func (f *FriendshipStore) Accept(ID string) (friendship *model.Friendship, err error) {
+	friendship, err = f.Get(ID)
+	if err != nil {
+		return
 	}
 
 	friendship.Status = model.FriendshipStatusEnum.ACCEPTED
 	err = f.db.Where("sender = ? AND recipient = ?", friendship.Sender, friendship.Recipient).Select("updated_at", "status").Updates(friendship).Error
 
-	return friendship, err
+	return
 }
 
-func (f *FriendshipStore) Get(friendshipID string) (*model.Friendship, error) {
-	friendship := &model.Friendship{ID: friendshipID}
+func (f *FriendshipStore) Get(ID string) (friendship *model.Friendship, err error) {
+	err = f.db.Where("id = ?", ID).First(&friendship).Error
 
-	err := f.db.Where("id = ?", friendshipID).Find(friendship).Error
+	return
+}
 
-	return friendship, err
+func (f *FriendshipStore) GetMany(ID string, status *string) (friendships []*model.Friendship, err error) {
+	query := f.db.Where(f.db.Where("sender = ?", ID).Or("recipient = ?", ID))
+	if status != nil {
+		query.Where("status = ?", status)
+	}
+	err = query.Find(&friendships).Error
+
+	return
 }
 
 // FriendshipStore helper methods.

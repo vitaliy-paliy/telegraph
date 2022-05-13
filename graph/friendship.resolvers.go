@@ -5,7 +5,6 @@ package graph
 
 import (
 	"context"
-	"fmt"
 	"telegraph/model"
 )
 
@@ -18,17 +17,13 @@ func (r *mutationResolver) AcceptFriendship(ctx context.Context, friendshipID st
 }
 
 func (r *mutationResolver) DeleteFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.client.Friendship.Delete(friendshipID)
 }
 
 func (r *queryResolver) GetFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.client.Friendship.Get(friendshipID)
 }
 
-func (r *queryResolver) GetFriendships(ctx context.Context, userID string) ([]*model.Friendship, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-
-func (r *queryResolver) GetPendingFriendships(ctx context.Context, userID string) ([]*model.Friendship, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) GetFriendships(ctx context.Context, userID string, friendshipStatus *string) ([]*model.Friendship, error) {
+	return r.client.Friendship.GetMany(userID, friendshipStatus)
 }

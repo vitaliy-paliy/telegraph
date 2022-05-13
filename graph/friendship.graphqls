@@ -9,7 +9,7 @@ type Friendship {
 	status: FriendshipStatus!
 	created_at: Time!
 	updated_at: Time!
-	deleted_at: Time!	
+	deleted_at: Time
 }
 
 input NewFriendshipInput {
@@ -18,13 +18,12 @@ input NewFriendshipInput {
 }
 
 extend type Mutation {
-	createFriendship(new_friendship: NewFriendshipInput!): Friendship!
-	acceptFriendship(friendship_id: String!): Friendship!
-	deleteFriendship(friendship_id: String!): Friendship!
+	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @auth
+	acceptFriendship(friendship_id: String!): Friendship! @auth
+	deleteFriendship(friendship_id: String!): Friendship! @auth
 }
 
 extend type Query {
-	getFriendship(friendship_id: String!): Friendship!
-	getFriendships(user_id: String!): [Friendship!]!
-	getPendingFriendships(user_id: String!): [Friendship!]!
+	getFriendship(friendship_id: String!): Friendship! @auth
+	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @auth
 }

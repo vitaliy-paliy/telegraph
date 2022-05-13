@@ -4,6 +4,7 @@ import (
 	"telegraph/model"
 	"telegraph/store"
 
+	"github.com/harranali/authority"
 	_ "github.com/lib/pq"
 
 	"gorm.io/driver/postgres"
@@ -12,6 +13,7 @@ import (
 
 type Client struct {
 	DB         *gorm.DB
+	Authority  *authority.Authority
 	Auth       *store.AuthStore
 	Friendship *store.FriendshipStore
 }
@@ -31,11 +33,18 @@ func Start() (client *Client, err error) {
 	if err != nil {
 		return
 	}
+
 	autoMigrate(db)
 
 	// New client.
 	client = &Client{DB: db}
 	client.init()
+
+	auth := authority.New(authority.Options{
+		TablesPrefix: "authority_",
+		DB:           db,
+	})
+	client.Authority = auth
 
 	return
 }

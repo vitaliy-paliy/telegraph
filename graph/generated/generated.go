@@ -65,12 +65,11 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetFriendship         func(childComplexity int, friendshipID string) int
-		GetFriendships        func(childComplexity int, userID string) int
-		GetPendingFriendships func(childComplexity int, userID string) int
-		SendOtp               func(childComplexity int, phoneNumber string) int
-		SignIn                func(childComplexity int, phoneNumber string) int
-		Welcome               func(childComplexity int) int
+		GetFriendship  func(childComplexity int, friendshipID string) int
+		GetFriendships func(childComplexity int, userID string, friendshipStatus *string) int
+		SendOtp        func(childComplexity int, phoneNumber string) int
+		SignIn         func(childComplexity int, phoneNumber string) int
+		Welcome        func(childComplexity int) int
 	}
 
 	User struct {
@@ -98,8 +97,7 @@ type QueryResolver interface {
 	SendOtp(ctx context.Context, phoneNumber string) (string, error)
 	SignIn(ctx context.Context, phoneNumber string) (*model.User, error)
 	GetFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error)
-	GetFriendships(ctx context.Context, userID string) ([]*model.Friendship, error)
-	GetPendingFriendships(ctx context.Context, userID string) ([]*model.Friendship, error)
+	GetFriendships(ctx context.Context, userID string, friendshipStatus *string) ([]*model.Friendship, error)
 }
 
 type executableSchema struct {
@@ -243,19 +241,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.GetFriendships(childComplexity, args["user_id"].(string)), true
-
-	case "Query.getPendingFriendships":
-		if e.complexity.Query.GetPendingFriendships == nil {
-			break
-		}
-
-		args, err := ec.field_Query_getPendingFriendships_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.GetPendingFriendships(childComplexity, args["user_id"].(string)), true
+		return e.complexity.Query.GetFriendships(childComplexity, args["user_id"].(string), args["friendship_status"].(*string)), true
 
 	case "Query.sendOTP":
 		if e.complexity.Query.SendOtp == nil {
@@ -446,7 +432,7 @@ type Friendship {
 	status: FriendshipStatus!
 	created_at: Time!
 	updated_at: Time!
-	deleted_at: Time!	
+	deleted_at: Time
 }
 
 input NewFriendshipInput {
@@ -455,15 +441,14 @@ input NewFriendshipInput {
 }
 
 extend type Mutation {
-	createFriendship(new_friendship: NewFriendshipInput!): Friendship!
-	acceptFriendship(friendship_id: String!): Friendship!
-	deleteFriendship(friendship_id: String!): Friendship!
+	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @auth
+	acceptFriendship(friendship_id: String!): Friendship! @auth
+	deleteFriendship(friendship_id: String!): Friendship! @auth
 }
 
 extend type Query {
-	getFriendship(friendship_id: String!): Friendship!
-	getFriendships(user_id: String!): [Friendship!]!
-	getPendingFriendships(user_id: String!): [Friendship!]!
+	getFriendship(friendship_id: String!): Friendship! @auth
+	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @auth
 }
 `, BuiltIn: false},
 	{Name: "graph/schema.graphqls", Input: `# Schema for telegraph.
@@ -604,21 +589,15 @@ func (ec *executionContext) field_Query_getFriendships_args(ctx context.Context,
 		}
 	}
 	args["user_id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_getPendingFriendships_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["user_id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user_id"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	var arg1 *string
+	if tmp, ok := rawArgs["friendship_status"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("friendship_status"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["user_id"] = arg0
+	args["friendship_status"] = arg1
 	return args, nil
 }
 
@@ -975,14 +954,11 @@ func (ec *executionContext) _Friendship_deleted_at(ctx context.Context, field gr
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(time.Time)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Friendship_deleted_at(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1150,8 +1126,28 @@ func (ec *executionContext) _Mutation_createFriendship(ctx context.Context, fiel
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateFriendship(rctx, fc.Args["new_friendship"].(model.NewFriendshipInput))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CreateFriendship(rctx, fc.Args["new_friendship"].(model.NewFriendshipInput))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Friendship); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *telegraph/model.Friendship`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1221,8 +1217,28 @@ func (ec *executionContext) _Mutation_acceptFriendship(ctx context.Context, fiel
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AcceptFriendship(rctx, fc.Args["friendship_id"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().AcceptFriendship(rctx, fc.Args["friendship_id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Friendship); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *telegraph/model.Friendship`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1292,8 +1308,28 @@ func (ec *executionContext) _Mutation_deleteFriendship(ctx context.Context, fiel
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteFriendship(rctx, fc.Args["friendship_id"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().DeleteFriendship(rctx, fc.Args["friendship_id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Friendship); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *telegraph/model.Friendship`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1557,8 +1593,28 @@ func (ec *executionContext) _Query_getFriendship(ctx context.Context, field grap
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetFriendship(rctx, fc.Args["friendship_id"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetFriendship(rctx, fc.Args["friendship_id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Friendship); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *telegraph/model.Friendship`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1628,8 +1684,28 @@ func (ec *executionContext) _Query_getFriendships(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetFriendships(rctx, fc.Args["user_id"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetFriendships(rctx, fc.Args["user_id"].(string), fc.Args["friendship_status"].(*string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Friendship); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*telegraph/model.Friendship`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1680,77 +1756,6 @@ func (ec *executionContext) fieldContext_Query_getFriendships(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_getFriendships_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_getPendingFriendships(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_getPendingFriendships(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetPendingFriendships(rctx, fc.Args["user_id"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Friendship)
-	fc.Result = res
-	return ec.marshalNFriendship2ᚕᚖtelegraphᚋmodelᚐFriendshipᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_getPendingFriendships(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Friendship_id(ctx, field)
-			case "sender":
-				return ec.fieldContext_Friendship_sender(ctx, field)
-			case "recipient":
-				return ec.fieldContext_Friendship_recipient(ctx, field)
-			case "status":
-				return ec.fieldContext_Friendship_status(ctx, field)
-			case "created_at":
-				return ec.fieldContext_Friendship_created_at(ctx, field)
-			case "updated_at":
-				return ec.fieldContext_Friendship_updated_at(ctx, field)
-			case "deleted_at":
-				return ec.fieldContext_Friendship_deleted_at(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Friendship", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_getPendingFriendships_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -4215,9 +4220,6 @@ func (ec *executionContext) _Friendship(ctx context.Context, sel ast.SelectionSe
 
 			out.Values[i] = innerFunc(ctx)
 
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4430,29 +4432,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getFriendships(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
-		case "getPendingFriendships":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_getPendingFriendships(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -5476,6 +5455,16 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	res := graphql.MarshalString(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
+	res, err := graphql.UnmarshalTime(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
+	res := graphql.MarshalTime(v)
 	return res
 }
 

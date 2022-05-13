@@ -13,10 +13,12 @@ import (
 type Client struct {
 	DB   *gorm.DB
 	Auth *store.AuthStore
+	Friendship *store.FriendshipStore
 }
 
 func (c *Client) init() {
 	c.Auth = store.NewAuthStore(c.DB)
+	c.Friendship = store.NewFriendshipStore(c.DB)
 }
 
 func Start() (client *Client, err error) {
@@ -42,6 +44,7 @@ func Start() (client *Client, err error) {
 func autoMigrate(db *gorm.DB) {
 	models := []interface{}{
 		&model.User{},
+		&model.Friendship{},
 	}
 
 	for _, model := range models {

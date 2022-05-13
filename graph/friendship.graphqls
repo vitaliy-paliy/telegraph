@@ -1,0 +1,30 @@
+# Friendship schema
+
+scalar FriendshipStatus
+
+type Friendship {
+	id: ID!
+	sender: ID!
+	recipient: ID!
+	status: FriendshipStatus!
+	created_at: Time!
+	updated_at: Time!
+	deleted_at: Time!	
+}
+
+input NewFriendshipInput {
+	sender: ID!
+	recipient: ID!
+}
+
+extend type Mutation {
+	createFriendship(new_friendship: NewFriendshipInput!): Friendship!
+	acceptFriendship(friendship_id: String!): Friendship!
+	deleteFriendship(friendship_id: String!): Friendship!
+}
+
+extend type Query {
+	getFriendship(friendship_id: String!): Friendship!
+	getFriendships(user_id: String!): [Friendship!]!
+	getPendingFriendships(user_id: String!): [Friendship!]!
+}

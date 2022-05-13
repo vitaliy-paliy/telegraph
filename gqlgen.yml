@@ -57,3 +57,6 @@ models:
   UserActivityStatus:
     model:
       - telegraph/model.UserActivityStatus
+  FriendshipStatus:
+    model:
+      - telegraph/model.FriendshipStatus

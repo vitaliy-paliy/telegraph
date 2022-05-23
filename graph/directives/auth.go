@@ -2,6 +2,7 @@ package directives
 
 import (
 	"context"
+	"fmt"
 
 	"telegraph/middleware"
 
@@ -14,6 +15,7 @@ func Auth(ctx context.Context, obj interface{}, next graphql.Resolver) (interfac
 	if token == nil {
 		return nil, &gqlerror.Error{Message: "Access Denied"}
 	}
+	fmt.Println(token)
 
 	return next(ctx)
 }

@@ -10,18 +10,15 @@ import (
 )
 
 func (f *FriendshipStore) Create(friendship *model.Friendship) (*model.Friendship, error) {
-	if friendship, err := f.isDuplicate(friendship); friendship != nil {
-		return friendship, err
-	}
-
+	// Check for self friend request.
 	if friendship.Sender == friendship.Recipient {
 		return nil, fmt.Errorf("Invalid friendship request.")
 	}
 
-	friendship.ID = uuid.NewV4().String()
-	friendship.Status = model.FriendshipStatusEnum.PENDING
+	err := f.db.Where(friendship).Or(friendship.Invert()).
+		Attrs(model.Friendship{ID: uuid.NewV4().String(), Status: model.FriendshipStatusEnum.PENDING}).
+		FirstOrCreate(friendship).Error
 
-	err := f.db.Create(friendship).Error
 	return friendship, err
 }
 
@@ -43,8 +40,12 @@ func (f *FriendshipStore) Accept(ID string) (friendship *model.Friendship, err e
 		return
 	}
 
-	friendship.Status = model.FriendshipStatusEnum.ACCEPTED
-	err = f.db.Where("sender = ? AND recipient = ?", friendship.Sender, friendship.Recipient).Select("updated_at", "status").Updates(friendship).Error
+	err = f.db.Model(friendship).Where("id = ?", ID).Update("status", model.FriendshipStatusEnum.ACCEPTED).Error
+	if err != nil {
+		return
+	}
+
+	// Create RBAC reference.
 
 	return
 }
@@ -63,31 +64,4 @@ func (f *FriendshipStore) GetMany(ID string, status *string) (friendships []*mod
 	err = query.Find(&friendships).Error
 
 	return
-}
-
-// FriendshipStore helper methods.
-
-func (f *FriendshipStore) isDuplicate(friendship *model.Friendship) (*model.Friendship, error) {
-	invertedFriendship := friendship.Invert()
-	if f.isPresent(invertedFriendship) {
-		switch invertedFriendship.Status {
-		case model.FriendshipStatusEnum.ACCEPTED:
-			return invertedFriendship, nil
-		case model.FriendshipStatusEnum.PENDING:
-			return f.Accept(invertedFriendship.ID)
-		default:
-			return invertedFriendship, fmt.Errorf("%v status is not implemented.", invertedFriendship.Status)
-		}
-	}
-
-	if f.isPresent(friendship) {
-		return friendship, nil
-	}
-
-	// No duplicate friendship is found, create a new one.
-	return nil, nil
-}
-
-func (f *FriendshipStore) isPresent(friendship *model.Friendship) bool {
-	return f.db.Where("sender = ? AND recipient = ?", friendship.Sender, friendship.Recipient).Find(friendship).RowsAffected != 0
 }

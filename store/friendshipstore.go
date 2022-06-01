@@ -19,6 +19,17 @@ func (f *FriendshipStore) Create(friendship *model.Friendship) (*model.Friendshi
 		Attrs(model.Friendship{ID: uuid.NewV4().String(), Status: model.FriendshipStatusEnum.PENDING}).
 		FirstOrCreate(friendship).Error
 
+	// Create request policy
+	senderPolicy := []string{friendship.Sender, friendship.ID, model.FriendshipPolicyEnum.SENDER}
+	if hasPolicy := f.enf.HasPolicy(senderPolicy); !hasPolicy {
+		f.enf.AddPolicy(senderPolicy)
+	}
+
+	recipientPolicy := []string{friendship.Recipient, friendship.ID, model.FriendshipPolicyEnum.RECIPIENT}
+	if hasPolicy := f.enf.HasPolicy(recipientPolicy); !hasPolicy {
+		f.enf.AddPolicy(recipientPolicy)
+	}
+
 	return friendship, err
 }
 
@@ -30,6 +41,16 @@ func (f *FriendshipStore) Delete(ID string) (friendship *model.Friendship, err e
 
 	friendship.DeletedAt = time.Now()
 	err = f.db.Unscoped().Where("id = ?", ID).Delete(friendship).Error
+	if err != nil {
+		return
+	}
+
+	// Delete casbin policy.
+	for _, userID := range []string{friendship.Sender, friendship.Recipient} {
+		if hasPolicy := f.enf.HasPolicy(userID, ID, model.FriendshipPolicyEnum.FRIEND); hasPolicy {
+			f.enf.RemovePolicy(userID, ID, model.FriendshipPolicyEnum.FRIEND)
+		}
+	}
 
 	return
 }
@@ -45,7 +66,21 @@ func (f *FriendshipStore) Accept(ID string) (friendship *model.Friendship, err e
 		return
 	}
 
-	// Create RBAC reference.
+	// Create friendship policy.
+	for _, userID := range []string{friendship.Sender, friendship.Recipient} {
+		if hasPolicy := f.enf.HasPolicy(userID, ID, model.FriendshipPolicyEnum.FRIEND); !hasPolicy {
+			f.enf.AddPolicy(userID, ID, model.FriendshipPolicyEnum.FRIEND)
+		}
+	}
+
+	// Delete request policy
+	if hasPolicy := f.enf.HasPolicy(friendship.Sender, ID, model.FriendshipPolicyEnum.SENDER); hasPolicy {
+		f.enf.RemovePolicy(friendship.Sender, ID, model.FriendshipPolicyEnum.SENDER)
+	}
+
+	if hasPolicy := f.enf.HasPolicy(friendship.Recipient, ID, model.FriendshipPolicyEnum.RECIPIENT); hasPolicy {
+		f.enf.RemovePolicy(friendship.Recipient, ID, model.FriendshipPolicyEnum.RECIPIENT)
+	}
 
 	return
 }

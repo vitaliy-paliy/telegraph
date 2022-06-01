@@ -60,3 +60,6 @@ models:
   FriendshipStatus:
     model:
       - telegraph/model.FriendshipStatus
+  Action:
+    model:
+     - telegraph/model.Action

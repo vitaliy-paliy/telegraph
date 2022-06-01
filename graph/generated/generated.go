@@ -42,7 +42,9 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Auth func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	Auth           func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	Authorization  func(ctx context.Context, obj interface{}, next graphql.Resolver) (res interface{}, err error)
+	FriendshipAuth func(ctx context.Context, obj interface{}, next graphql.Resolver, action model.Action) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -56,6 +58,10 @@ type ComplexityRoot struct {
 		UpdatedAt func(childComplexity int) int
 	}
 
+	Message struct {
+		Text func(childComplexity int) int
+	}
+
 	Mutation struct {
 		AcceptFriendship func(childComplexity int, friendshipID string) int
 		CreateFriendship func(childComplexity int, newFriendship model.NewFriendshipInput) int
@@ -67,6 +73,7 @@ type ComplexityRoot struct {
 	Query struct {
 		GetFriendship  func(childComplexity int, friendshipID string) int
 		GetFriendships func(childComplexity int, userID string, friendshipStatus *string) int
+		GetMessages    func(childComplexity int, conversationID string) int
 		SendOtp        func(childComplexity int, phoneNumber string) int
 		SignIn         func(childComplexity int, phoneNumber string) int
 		Welcome        func(childComplexity int) int
@@ -98,6 +105,7 @@ type QueryResolver interface {
 	SignIn(ctx context.Context, phoneNumber string) (*model.User, error)
 	GetFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error)
 	GetFriendships(ctx context.Context, userID string, friendshipStatus *string) ([]*model.Friendship, error)
+	GetMessages(ctx context.Context, conversationID string) ([]*model.Message, error)
 }
 
 type executableSchema struct {
@@ -163,6 +171,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Friendship.UpdatedAt(childComplexity), true
+
+	case "Message.text":
+		if e.complexity.Message.Text == nil {
+			break
+		}
+
+		return e.complexity.Message.Text(childComplexity), true
 
 	case "Mutation.acceptFriendship":
 		if e.complexity.Mutation.AcceptFriendship == nil {
@@ -242,6 +257,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetFriendships(childComplexity, args["user_id"].(string), args["friendship_status"].(*string)), true
+
+	case "Query.getMessages":
+		if e.complexity.Query.GetMessages == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getMessages_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetMessages(childComplexity, args["conversation_id"].(string)), true
 
 	case "Query.sendOTP":
 		if e.complexity.Query.SendOtp == nil {
@@ -425,6 +452,12 @@ extend type Mutation {
 
 scalar FriendshipStatus
 
+directive @friendshipAuth(action: Action!) on FIELD_DEFINITION
+
+enum Action {
+	Create, GetOne, GetMany, Update, Delete 
+}
+
 type Friendship {
 	id: ID!
 	sender: ID!
@@ -441,15 +474,28 @@ input NewFriendshipInput {
 }
 
 extend type Mutation {
-	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @auth
-	acceptFriendship(friendship_id: String!): Friendship! @auth
-	deleteFriendship(friendship_id: String!): Friendship! @auth
+	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @friendshipAuth(action: Create)
+	acceptFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Update)
+	deleteFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
 }
 
 extend type Query {
-	getFriendship(friendship_id: String!): Friendship! @auth
-	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @auth
+	getFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: GetOne)
+	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @friendshipAuth(action: GetMany)
 }
+`, BuiltIn: false},
+	{Name: "graph/messenger.graphqls", Input: `#messenger graphql
+
+directive @authorization on FIELD_DEFINITION
+
+type Message {
+	text: String!
+}
+
+extend type Query {
+	getMessages(conversation_id: ID!): [Message!]! @authorization
+}
+
 `, BuiltIn: false},
 	{Name: "graph/schema.graphqls", Input: `# Schema for telegraph.
 # schema.graphqls is for defining standard types.
@@ -486,6 +532,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) dir_friendshipAuth_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.Action
+	if tmp, ok := rawArgs["action"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("action"))
+		arg0, err = ec.unmarshalNAction2telegraphᚋmodelᚐAction(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["action"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Mutation_acceptFriendship_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -598,6 +659,21 @@ func (ec *executionContext) field_Query_getFriendships_args(ctx context.Context,
 		}
 	}
 	args["friendship_status"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getMessages_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["conversation_id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("conversation_id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["conversation_id"] = arg0
 	return args, nil
 }
 
@@ -974,6 +1050,50 @@ func (ec *executionContext) fieldContext_Friendship_deleted_at(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Message_text(ctx context.Context, field graphql.CollectedField, obj *model.Message) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Message_text(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Text, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Message_text(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Message",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_welcome(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_welcome(ctx, field)
 	if err != nil {
@@ -1131,10 +1251,14 @@ func (ec *executionContext) _Mutation_createFriendship(ctx context.Context, fiel
 			return ec.resolvers.Mutation().CreateFriendship(rctx, fc.Args["new_friendship"].(model.NewFriendshipInput))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
+			action, err := ec.unmarshalNAction2telegraphᚋmodelᚐAction(ctx, "Create")
+			if err != nil {
+				return nil, err
 			}
-			return ec.directives.Auth(ctx, nil, directive0)
+			if ec.directives.FriendshipAuth == nil {
+				return nil, errors.New("directive friendshipAuth is not implemented")
+			}
+			return ec.directives.FriendshipAuth(ctx, nil, directive0, action)
 		}
 
 		tmp, err := directive1(rctx)
@@ -1222,10 +1346,14 @@ func (ec *executionContext) _Mutation_acceptFriendship(ctx context.Context, fiel
 			return ec.resolvers.Mutation().AcceptFriendship(rctx, fc.Args["friendship_id"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
+			action, err := ec.unmarshalNAction2telegraphᚋmodelᚐAction(ctx, "Update")
+			if err != nil {
+				return nil, err
 			}
-			return ec.directives.Auth(ctx, nil, directive0)
+			if ec.directives.FriendshipAuth == nil {
+				return nil, errors.New("directive friendshipAuth is not implemented")
+			}
+			return ec.directives.FriendshipAuth(ctx, nil, directive0, action)
 		}
 
 		tmp, err := directive1(rctx)
@@ -1313,10 +1441,14 @@ func (ec *executionContext) _Mutation_deleteFriendship(ctx context.Context, fiel
 			return ec.resolvers.Mutation().DeleteFriendship(rctx, fc.Args["friendship_id"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
+			action, err := ec.unmarshalNAction2telegraphᚋmodelᚐAction(ctx, "Delete")
+			if err != nil {
+				return nil, err
 			}
-			return ec.directives.Auth(ctx, nil, directive0)
+			if ec.directives.FriendshipAuth == nil {
+				return nil, errors.New("directive friendshipAuth is not implemented")
+			}
+			return ec.directives.FriendshipAuth(ctx, nil, directive0, action)
 		}
 
 		tmp, err := directive1(rctx)
@@ -1598,10 +1730,14 @@ func (ec *executionContext) _Query_getFriendship(ctx context.Context, field grap
 			return ec.resolvers.Query().GetFriendship(rctx, fc.Args["friendship_id"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
+			action, err := ec.unmarshalNAction2telegraphᚋmodelᚐAction(ctx, "GetOne")
+			if err != nil {
+				return nil, err
 			}
-			return ec.directives.Auth(ctx, nil, directive0)
+			if ec.directives.FriendshipAuth == nil {
+				return nil, errors.New("directive friendshipAuth is not implemented")
+			}
+			return ec.directives.FriendshipAuth(ctx, nil, directive0, action)
 		}
 
 		tmp, err := directive1(rctx)
@@ -1689,10 +1825,14 @@ func (ec *executionContext) _Query_getFriendships(ctx context.Context, field gra
 			return ec.resolvers.Query().GetFriendships(rctx, fc.Args["user_id"].(string), fc.Args["friendship_status"].(*string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			if ec.directives.Auth == nil {
-				return nil, errors.New("directive auth is not implemented")
+			action, err := ec.unmarshalNAction2telegraphᚋmodelᚐAction(ctx, "GetMany")
+			if err != nil {
+				return nil, err
 			}
-			return ec.directives.Auth(ctx, nil, directive0)
+			if ec.directives.FriendshipAuth == nil {
+				return nil, errors.New("directive friendshipAuth is not implemented")
+			}
+			return ec.directives.FriendshipAuth(ctx, nil, directive0, action)
 		}
 
 		tmp, err := directive1(rctx)
@@ -1756,6 +1896,85 @@ func (ec *executionContext) fieldContext_Query_getFriendships(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_getFriendships_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getMessages(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_getMessages(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetMessages(rctx, fc.Args["conversation_id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Authorization == nil {
+				return nil, errors.New("directive authorization is not implemented")
+			}
+			return ec.directives.Authorization(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.Message); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*telegraph/model.Message`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Message)
+	fc.Result = res
+	return ec.marshalNMessage2ᚕᚖtelegraphᚋmodelᚐMessageᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_getMessages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "text":
+				return ec.fieldContext_Message_text(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Message", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getMessages_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -4231,6 +4450,37 @@ func (ec *executionContext) _Friendship(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var messageImplementors = []string{"Message"}
+
+func (ec *executionContext) _Message(ctx context.Context, sel ast.SelectionSet, obj *model.Message) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, messageImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Message")
+		case "text":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Message_text(ctx, field, obj)
+			}
+
+			out.Values[i] = innerFunc(ctx)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -4432,6 +4682,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getFriendships(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "getMessages":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getMessages(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -5001,6 +5274,16 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) unmarshalNAction2telegraphᚋmodelᚐAction(ctx context.Context, v interface{}) (model.Action, error) {
+	var res model.Action
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAction2telegraphᚋmodelᚐAction(ctx context.Context, sel ast.SelectionSet, v model.Action) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -5097,6 +5380,60 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNMessage2ᚕᚖtelegraphᚋmodelᚐMessageᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Message) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNMessage2ᚖtelegraphᚋmodelᚐMessage(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNMessage2ᚖtelegraphᚋmodelᚐMessage(ctx context.Context, sel ast.SelectionSet, v *model.Message) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Message(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNNewFriendshipInput2telegraphᚋmodelᚐNewFriendshipInput(ctx context.Context, v interface{}) (model.NewFriendshipInput, error) {

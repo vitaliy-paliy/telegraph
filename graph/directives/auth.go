@@ -15,7 +15,7 @@ func Auth(ctx context.Context, obj interface{}, next graphql.Resolver) (interfac
 	if token == nil {
 		return nil, &gqlerror.Error{Message: "Access Denied"}
 	}
-	fmt.Println(token)
 
+	fmt.Println(token.ID)
 	return next(ctx)
 }

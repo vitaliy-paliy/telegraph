@@ -2,6 +2,12 @@
 
 scalar FriendshipStatus
 
+directive @friendshipAuth(action: Action!) on FIELD_DEFINITION
+
+enum Action {
+	Create, GetOne, GetMany, Update, Delete 
+}
+
 type Friendship {
 	id: ID!
 	sender: ID!
@@ -18,12 +24,12 @@ input NewFriendshipInput {
 }
 
 extend type Mutation {
-	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @auth
-	acceptFriendship(friendship_id: String!): Friendship! @auth
-	deleteFriendship(friendship_id: String!): Friendship! @auth
+	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @friendshipAuth(action: Create)
+	acceptFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Update)
+	deleteFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
 }
 
 extend type Query {
-	getFriendship(friendship_id: String!): Friendship! @auth
-	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @auth
+	getFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: GetOne)
+	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @friendshipAuth(action: GetMany)
 }

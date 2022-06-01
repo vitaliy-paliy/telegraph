@@ -30,7 +30,10 @@ func newServer() (server *handler.Server) {
 	// New server.
 	resolver := graph.NewResolver(client)
 	config := generated.Config{Resolvers: resolver}
+	// Directives
 	config.Directives.Auth = directives.Auth
+	config.Directives.Authorization = directives.Authorization(client)
+	config.Directives.FriendshipAuth = directives.FriendshipAuth(client)
 	server = handler.New(generated.NewExecutableSchema(config))
 
 	// New Websocket && CORS.
@@ -61,6 +64,8 @@ func newServer() (server *handler.Server) {
 
 func newRouter(server *handler.Server) (e *echo.Echo) {
 	e = echo.New()
+
+	// Middleware.
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(tmiddleware.Auth)

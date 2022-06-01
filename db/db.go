@@ -4,21 +4,24 @@ import (
 	"telegraph/model"
 	"telegraph/store"
 
-	_ "github.com/lib/pq"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/casbin/casbin/v2"
+	gormadapter "github.com/casbin/gorm-adapter/v3"
+	_ "github.com/lib/pq"
 )
 
 type Client struct {
 	DB         *gorm.DB
+	Enforcer   *casbin.Enforcer
 	Auth       *store.AuthStore
 	Friendship *store.FriendshipStore
 }
 
 func (c *Client) init() {
 	c.Auth = store.NewAuthStore(c.DB)
-	c.Friendship = store.NewFriendshipStore(c.DB)
+	c.Friendship = store.NewFriendshipStore(c.DB, c.Enforcer)
 }
 
 func Start() (client *Client, err error) {
@@ -32,11 +35,22 @@ func Start() (client *Client, err error) {
 		return
 	}
 
-	autoMigrate(db)
+	// Casbin
+	adapter, err := gormadapter.NewAdapterByDB(db)
+	if err != nil {
+		return
+	}
+
+	enforcer, err := casbin.NewEnforcer("config/model.conf", adapter)
+	if err != nil {
+		return
+	}
 
 	// New client.
-	client = &Client{DB: db}
+	client = &Client{DB: db, Enforcer: enforcer}
 	client.init()
+
+	autoMigrate(db)
 
 	return
 }

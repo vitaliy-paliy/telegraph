@@ -1,0 +1,12 @@
+#messenger graphql
+
+directive @authorization on FIELD_DEFINITION
+
+type Message {
+	text: String!
+}
+
+extend type Query {
+	getMessages(conversation_id: ID!): [Message!]! @authorization
+}
+

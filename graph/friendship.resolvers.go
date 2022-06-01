@@ -16,6 +16,10 @@ func (r *mutationResolver) AcceptFriendship(ctx context.Context, friendshipID st
 	return r.client.Friendship.Accept(friendshipID)
 }
 
+func (r *mutationResolver) CancelFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error) {
+	return r.client.Friendship.Cancel(friendshipID)
+}
+
 func (r *mutationResolver) DeleteFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error) {
 	return r.client.Friendship.Delete(friendshipID)
 }

@@ -26,6 +26,7 @@ input NewFriendshipInput {
 extend type Mutation {
 	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @friendshipAuth(action: Create)
 	acceptFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Update)
+	cancelFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
 	deleteFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
 }
 

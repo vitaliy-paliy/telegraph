@@ -32,7 +32,7 @@ func FriendshipAuth(client *db.Client) func(context.Context, interface{}, graphq
 				return nil, &gqlerror.Error{Message: fmt.Sprintf("An error occurred while trying to load enforcer policy: %s", err)}
 			}
 
-			for _, policy := range []string{model.FriendshipPolicyEnum.FRIEND, model.FriendshipPolicyEnum.RECIPIENT} {
+			for _, policy := range []string{model.FriendshipPolicyEnum.FRIEND, model.FriendshipPolicyEnum.SENDER, model.FriendshipPolicyEnum.RECIPIENT} {
 				ok, err := client.Enforcer.Enforce(fmt.Sprint(token.ID), fmt.Sprint(friendshipID), policy)
 				if err != nil {
 					return nil, &gqlerror.Error{Message: fmt.Sprintf("An error occurred while trying to authorize the user: %s", err)}

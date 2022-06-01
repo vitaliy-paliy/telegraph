@@ -12,7 +12,7 @@ import (
 func (f *FriendshipStore) Create(friendship *model.Friendship) (*model.Friendship, error) {
 	// Check for self friend request.
 	if friendship.Sender == friendship.Recipient {
-		return nil, fmt.Errorf("Invalid friendship request.")
+		return nil, fmt.Errorf("Error: invalid friendship request.")
 	}
 
 	err := f.db.Where(friendship).Or(friendship.Invert()).
@@ -73,14 +73,28 @@ func (f *FriendshipStore) Accept(ID string) (friendship *model.Friendship, err e
 		}
 	}
 
-	// Delete request policy
-	if hasPolicy := f.enf.HasPolicy(friendship.Sender, ID, model.FriendshipPolicyEnum.SENDER); hasPolicy {
-		f.enf.RemovePolicy(friendship.Sender, ID, model.FriendshipPolicyEnum.SENDER)
+	f.deleteRequestPolicies(friendship)
+
+	return
+}
+
+func (f *FriendshipStore) Cancel(ID string) (friendship *model.Friendship, err error) {
+	friendship, err = f.Get(ID)
+	if err != nil {
+		return
 	}
 
-	if hasPolicy := f.enf.HasPolicy(friendship.Recipient, ID, model.FriendshipPolicyEnum.RECIPIENT); hasPolicy {
-		f.enf.RemovePolicy(friendship.Recipient, ID, model.FriendshipPolicyEnum.RECIPIENT)
+	if friendship.Status != model.FriendshipStatusEnum.PENDING {
+		err = fmt.Errorf("Error: cannot cancel non-pending friend request.")
+		return
 	}
+
+	err = f.db.Unscoped().Where("id = ?", ID).Delete(friendship).Error
+	if err != nil {
+		return
+	}
+
+	f.deleteRequestPolicies(friendship)
 
 	return
 }
@@ -99,4 +113,16 @@ func (f *FriendshipStore) GetMany(ID string, status *string) (friendships []*mod
 	err = query.Find(&friendships).Error
 
 	return
+}
+
+// Handlers
+
+func (f *FriendshipStore) deleteRequestPolicies(friendship *model.Friendship) {
+	if hasPolicy := f.enf.HasPolicy(friendship.Sender, friendship.ID, model.FriendshipPolicyEnum.SENDER); hasPolicy {
+		f.enf.RemovePolicy(friendship.Sender, friendship.ID, model.FriendshipPolicyEnum.SENDER)
+	}
+
+	if hasPolicy := f.enf.HasPolicy(friendship.Recipient, friendship.ID, model.FriendshipPolicyEnum.RECIPIENT); hasPolicy {
+		f.enf.RemovePolicy(friendship.Recipient, friendship.ID, model.FriendshipPolicyEnum.RECIPIENT)
+	}
 }

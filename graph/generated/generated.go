@@ -64,6 +64,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AcceptFriendship func(childComplexity int, friendshipID string) int
+		CancelFriendship func(childComplexity int, friendshipID string) int
 		CreateFriendship func(childComplexity int, newFriendship model.NewFriendshipInput) int
 		DeleteFriendship func(childComplexity int, friendshipID string) int
 		SignUp           func(childComplexity int, newUser model.NewUserInput) int
@@ -97,6 +98,7 @@ type MutationResolver interface {
 	SignUp(ctx context.Context, newUser model.NewUserInput) (*model.User, error)
 	CreateFriendship(ctx context.Context, newFriendship model.NewFriendshipInput) (*model.Friendship, error)
 	AcceptFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error)
+	CancelFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error)
 	DeleteFriendship(ctx context.Context, friendshipID string) (*model.Friendship, error)
 }
 type QueryResolver interface {
@@ -190,6 +192,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.AcceptFriendship(childComplexity, args["friendship_id"].(string)), true
+
+	case "Mutation.cancelFriendship":
+		if e.complexity.Mutation.CancelFriendship == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_cancelFriendship_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CancelFriendship(childComplexity, args["friendship_id"].(string)), true
 
 	case "Mutation.createFriendship":
 		if e.complexity.Mutation.CreateFriendship == nil {
@@ -476,6 +490,7 @@ input NewFriendshipInput {
 extend type Mutation {
 	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @friendshipAuth(action: Create)
 	acceptFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Update)
+	cancelFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
 	deleteFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
 }
 
@@ -549,6 +564,21 @@ func (ec *executionContext) dir_friendshipAuth_args(ctx context.Context, rawArgs
 }
 
 func (ec *executionContext) field_Mutation_acceptFriendship_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["friendship_id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("friendship_id"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["friendship_id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_cancelFriendship_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -1417,6 +1447,101 @@ func (ec *executionContext) fieldContext_Mutation_acceptFriendship(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_acceptFriendship_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_cancelFriendship(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_cancelFriendship(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CancelFriendship(rctx, fc.Args["friendship_id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			action, err := ec.unmarshalNAction2telegraphᚋmodelᚐAction(ctx, "Delete")
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.FriendshipAuth == nil {
+				return nil, errors.New("directive friendshipAuth is not implemented")
+			}
+			return ec.directives.FriendshipAuth(ctx, nil, directive0, action)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Friendship); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *telegraph/model.Friendship`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Friendship)
+	fc.Result = res
+	return ec.marshalNFriendship2ᚖtelegraphᚋmodelᚐFriendship(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_cancelFriendship(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Friendship_id(ctx, field)
+			case "sender":
+				return ec.fieldContext_Friendship_sender(ctx, field)
+			case "recipient":
+				return ec.fieldContext_Friendship_recipient(ctx, field)
+			case "status":
+				return ec.fieldContext_Friendship_status(ctx, field)
+			case "created_at":
+				return ec.fieldContext_Friendship_created_at(ctx, field)
+			case "updated_at":
+				return ec.fieldContext_Friendship_updated_at(ctx, field)
+			case "deleted_at":
+				return ec.fieldContext_Friendship_deleted_at(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Friendship", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_cancelFriendship_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -4533,6 +4658,16 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "acceptFriendship":
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_acceptFriendship(ctx, field)
+			}
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "cancelFriendship":
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_cancelFriendship(ctx, field)
 			}
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, innerFunc)

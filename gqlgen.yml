@@ -63,3 +63,6 @@ models:
   Action:
     model:
      - telegraph/model.Action
+  MessageStatus:
+    model:
+     - telegraph/model.MessageStatus

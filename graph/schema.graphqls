@@ -3,6 +3,10 @@
 
 scalar Time
 
+enum Action {
+	Create, GetOne, GetMany, Update, Delete 
+}
+
 type Query {
 	welcome: String!
 }

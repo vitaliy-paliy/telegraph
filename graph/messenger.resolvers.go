@@ -8,6 +8,22 @@ import (
 	"telegraph/model"
 )
 
+func (r *mutationResolver) CreateMessage(ctx context.Context, newMessage model.NewMessageInput) (*model.Message, error) {
+	return r.client.Messenger.Create(newMessage.Convert())
+}
+
+func (r *mutationResolver) ReadMessage(ctx context.Context, messageID string, conversationID string) (*model.Message, error) {
+	return r.client.Messenger.Read(messageID)
+}
+
+func (r *mutationResolver) DeleteMessage(ctx context.Context, messageID string, conversationID string) (*model.Message, error) {
+	return r.client.Messenger.Delete(messageID)
+}
+
+func (r *queryResolver) GetMessage(ctx context.Context, messageID string, conversationID string) (*model.Message, error) {
+	return r.client.Messenger.Get(messageID)
+}
+
 func (r *queryResolver) GetMessages(ctx context.Context, conversationID string) ([]*model.Message, error) {
-	return []*model.Message{&model.Message{Text: "Success"}}, nil
+	return r.client.Messenger.GetMany(conversationID)
 }

@@ -17,11 +17,13 @@ type Client struct {
 	Enforcer   *casbin.Enforcer
 	Auth       *store.AuthStore
 	Friendship *store.FriendshipStore
+	Messenger  *store.MessengerStore
 }
 
 func (c *Client) init() {
 	c.Auth = store.NewAuthStore(c.DB)
 	c.Friendship = store.NewFriendshipStore(c.DB, c.Enforcer)
+	c.Messenger = store.NewMessengerStore(c.DB)
 }
 
 func Start() (client *Client, err error) {
@@ -60,6 +62,7 @@ func autoMigrate(db *gorm.DB) {
 	models := []interface{}{
 		&model.User{},
 		&model.Friendship{},
+		&model.Message{},
 	}
 
 	for _, model := range models {

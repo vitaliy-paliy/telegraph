@@ -4,10 +4,6 @@ scalar FriendshipStatus
 
 directive @friendshipAuth(action: Action!) on FIELD_DEFINITION
 
-enum Action {
-	Create, GetOne, GetMany, Update, Delete 
-}
-
 type Friendship {
 	id: ID!
 	sender: ID!

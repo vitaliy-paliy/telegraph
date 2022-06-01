@@ -10,11 +10,6 @@ import (
 )
 
 func (f *FriendshipStore) Create(friendship *model.Friendship) (*model.Friendship, error) {
-	// Check for self friend request.
-	if friendship.Sender == friendship.Recipient {
-		return nil, fmt.Errorf("Error: invalid friendship request.")
-	}
-
 	err := f.db.Where(friendship).Or(friendship.Invert()).
 		Attrs(model.Friendship{ID: uuid.NewV4().String(), Status: model.FriendshipStatusEnum.PENDING}).
 		FirstOrCreate(friendship).Error

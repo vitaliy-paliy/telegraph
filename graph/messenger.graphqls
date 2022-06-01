@@ -1,12 +1,35 @@
 #messenger graphql
+scalar MessageStatus
 
-directive @authorization on FIELD_DEFINITION
+directive @messengerAuth(action: Action!) on FIELD_DEFINITION
 
 type Message {
+	id: ID!
+	conversation_id: ID!
+	text: String!
+	sender: ID!
+	recipient: ID!
+	status: MessageStatus!
+	created_at: Time!
+	updated_at: Time!
+	deleted_at: Time
+}
+
+input NewMessageInput {
+	conversation_id: ID!
+	sender: ID!
+	recipient: ID!
 	text: String!
 }
 
+extend type Mutation {
+	createMessage(new_message: NewMessageInput!): Message! @messengerAuth(action: Create)
+	readMessage(message_id: ID!, conversation_id: ID!):	Message! @messengerAuth(action: Update)
+	deleteMessage(message_id: ID!, conversation_id: ID!): Message! @messengerAuth(action: Delete)
+}
+
 extend type Query {
-	getMessages(conversation_id: ID!): [Message!]! @authorization
+	getMessage(message_id: ID!, conversation_id: ID!): Message! @messengerAuth(action: GetOne)
+	getMessages(conversation_id: ID!): [Message!]! @messengerAuth(action: GetMany)
 }
 

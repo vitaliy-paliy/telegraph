@@ -32,7 +32,7 @@ func newServer() (server *handler.Server) {
 	config := generated.Config{Resolvers: resolver}
 	// Directives
 	config.Directives.Auth = directives.Auth
-	config.Directives.Authorization = directives.Authorization(client)
+	config.Directives.MessengerAuth = directives.MessengerAuth(client)
 	config.Directives.FriendshipAuth = directives.FriendshipAuth(client)
 	server = handler.New(generated.NewExecutableSchema(config))
 

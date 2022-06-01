@@ -21,33 +21,35 @@ func FriendshipAuth(client *db.Client) func(context.Context, interface{}, graphq
 		switch action {
 		case model.ActionCreate:
 			newFriendship := rc.Args["new_friendship"].(model.NewFriendshipInput)
-			if token.ID != newFriendship.Sender && token.ID != newFriendship.Recipient {
-				return nil, &gqlerror.Error{Message: "Not Authorized"}
+			if token.ID != newFriendship.Sender {
+				err = &gqlerror.Error{Message: "Not Authorized"}
 			}
 		case model.ActionGetOne, model.ActionUpdate, model.ActionDelete:
 			friendshipID := rc.Args["friendship_id"]
-
-			err := client.Enforcer.LoadPolicy()
+			err = client.Enforcer.LoadPolicy()
 			if err != nil {
-				return nil, &gqlerror.Error{Message: fmt.Sprintf("An error occurred while trying to load enforcer policy: %s", err)}
+				err = &gqlerror.Error{Message: fmt.Sprintf("An error occurred while trying to load enforcer policy: %s", err)}
+				break
 			}
 
 			for _, policy := range []string{model.FriendshipPolicyEnum.FRIEND, model.FriendshipPolicyEnum.SENDER, model.FriendshipPolicyEnum.RECIPIENT} {
-				ok, err := client.Enforcer.Enforce(fmt.Sprint(token.ID), fmt.Sprint(friendshipID), policy)
+				ok, err := client.Enforcer.Enforce(token.ID, friendshipID, policy)
 				if err != nil {
-					return nil, &gqlerror.Error{Message: fmt.Sprintf("An error occurred while trying to authorize the user: %s", err)}
+					err = &gqlerror.Error{Message: fmt.Sprintf("An error occurred while trying to authorize the user: %s", err)}
+					break
 				}
 
 				if ok {
 					return next(ctx)
 				}
 			}
-
-			return nil, &gqlerror.Error{Message: "Not Authorized"}
+			if err == nil {
+				err = &gqlerror.Error{Message: "Not Authorized"}
+			}
 		case model.ActionGetMany:
 			userID := rc.Args["user_id"]
 			if userID != token.ID {
-				return nil, &gqlerror.Error{Message: "Not Authorized"}
+				err = &gqlerror.Error{Message: "Not Authorized"}
 			}
 		default:
 			err = fmt.Errorf("%s is not a valid Action", action.String())

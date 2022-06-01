@@ -2,7 +2,7 @@
 
 scalar FriendshipStatus
 
-directive @friendshipAuth(action: Action!) on FIELD_DEFINITION
+directive @friendship(action: Action!) on FIELD_DEFINITION
 
 type Friendship {
 	id: ID!
@@ -20,13 +20,13 @@ input NewFriendshipInput {
 }
 
 extend type Mutation {
-	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @friendshipAuth(action: Create)
-	acceptFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Update)
-	cancelFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
-	deleteFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: Delete)
+	createFriendship(new_friendship: NewFriendshipInput!): Friendship! @friendship(action: Create)
+	acceptFriendship(friendship_id: String!): Friendship! @friendship(action: Update)
+	cancelFriendship(friendship_id: String!): Friendship! @friendship(action: Delete)
+	deleteFriendship(friendship_id: String!): Friendship! @friendship(action: Delete)
 }
 
 extend type Query {
-	getFriendship(friendship_id: String!): Friendship! @friendshipAuth(action: GetOne)
-	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @friendshipAuth(action: GetMany)
+	getFriendship(friendship_id: String!): Friendship! @friendship(action: GetOne)
+	getFriendships(user_id: String!, friendship_status: String): [Friendship!]! @friendship(action: GetMany)
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-func FriendshipAuth(client *db.Client) func(context.Context, interface{}, graphql.Resolver, model.Action) (interface{}, error) {
+func Friendship(client *db.Client) func(context.Context, interface{}, graphql.Resolver, model.Action) (interface{}, error) {
 	return func(ctx context.Context, obj interface{}, next graphql.Resolver, action model.Action) (interface{}, error) {
 		var err error
 		token := middleware.GetToken(ctx)

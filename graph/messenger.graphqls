@@ -1,7 +1,7 @@
 #messenger graphql
 scalar MessageStatus
 
-directive @messengerAuth(action: Action!) on FIELD_DEFINITION
+directive @messenger(action: Action!) on FIELD_DEFINITION
 
 type Message {
 	id: ID!
@@ -23,13 +23,16 @@ input NewMessageInput {
 }
 
 extend type Mutation {
-	createMessage(new_message: NewMessageInput!): Message! @messengerAuth(action: Create)
-	readMessage(message_id: ID!, conversation_id: ID!):	Message! @messengerAuth(action: Update)
-	deleteMessage(message_id: ID!, conversation_id: ID!): Message! @messengerAuth(action: Delete)
+	createMessage(new_message: NewMessageInput!): Message! @messenger(action: Create)
+	readMessage(message_id: ID!, conversation_id: ID!):	Message! @messenger(action: Update)
+	deleteMessage(message_id: ID!, conversation_id: ID!): Message! @messenger(action: Delete)
 }
 
 extend type Query {
-	getMessage(message_id: ID!, conversation_id: ID!): Message! @messengerAuth(action: GetOne)
-	getMessages(conversation_id: ID!): [Message!]! @messengerAuth(action: GetMany)
+	getMessage(message_id: ID!, conversation_id: ID!): Message! @messenger(action: GetOne)
+	getMessages(conversation_id: ID!): [Message!]! @messenger(action: GetMany)
 }
 
+extend type Subscription {
+	messagesSubscription(conversation_id: ID!, user_id: ID!): Message! @messenger(action: GetMany)
+}

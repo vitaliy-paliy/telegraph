@@ -14,3 +14,7 @@ type Query {
 type Mutation {
 	welcome: String!
 }
+
+type Subscription {
+	welcome: String!
+}

@@ -39,11 +39,9 @@ type FriendshipStatus int
 var FriendshipStatusEnum = struct {
 	PENDING  FriendshipStatus
 	ACCEPTED FriendshipStatus
-	BLOCKED  FriendshipStatus
 }{
 	PENDING:  0,
 	ACCEPTED: 1,
-	BLOCKED:  2,
 }
 
 func (f *FriendshipStatus) UnmarshalGQL(v interface{}) error {
@@ -62,11 +60,12 @@ func (f *FriendshipStatus) UnmarshalGQL(v interface{}) error {
 }
 
 func (f FriendshipStatus) MarshalGQL(w io.Writer) {
-	if f == FriendshipStatusEnum.PENDING {
+	switch f {
+	case FriendshipStatusEnum.PENDING:
 		w.Write([]byte(`"0"`))
-	} else if f == FriendshipStatusEnum.ACCEPTED {
+	case FriendshipStatusEnum.ACCEPTED:
 		w.Write([]byte(`"1"`))
-	} else if f == FriendshipStatusEnum.BLOCKED {
-		w.Write([]byte(`"2"`))
+	default:
+		panic("Error while marshal scheme")
 	}
 }

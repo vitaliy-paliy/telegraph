@@ -11,6 +11,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/lib/pq v1.10.2
+	github.com/orcaman/concurrent-map v1.0.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/twilio/twilio-go v0.24.1
 	github.com/vektah/gqlparser/v2 v2.4.2

@@ -32,8 +32,8 @@ func newServer() (server *handler.Server) {
 	config := generated.Config{Resolvers: resolver}
 	// Directives
 	config.Directives.Auth = directives.Auth
-	config.Directives.MessengerAuth = directives.MessengerAuth(client)
-	config.Directives.FriendshipAuth = directives.FriendshipAuth(client)
+	config.Directives.Messenger = directives.Messenger(client)
+	config.Directives.Friendship = directives.Friendship(client)
 	server = handler.New(generated.NewExecutableSchema(config))
 
 	// New Websocket && CORS.
